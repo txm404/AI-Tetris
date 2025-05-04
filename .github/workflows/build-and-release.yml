@@ -1,0 +1,133 @@
+name: Build and Release Tetris
+
+on:
+  push:
+    branches:
+      - master  # 或者你的主分支名称
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            asset_name: tetris-linux
+            output_name: tetris.bin # Nuitka 在 Linux 上的默认输出名
+          - os: windows-latest
+            asset_name: tetris-windows.exe
+            output_name: tetris.exe # Nuitka 在 Windows 上的默认输出名
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # 使用你项目兼容的 Python 版本
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r nuitka
+        # Nuitka已在requirements.txt中指定
+
+    - name: Build with Nuitka
+      run: |
+        # 安装平台特定依赖
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          sudo apt-get update
+          sudo apt-get install -y patchelf
+        fi
+        # 使用增强的Nuitka参数进行打包
+        python -m nuitka \
+          --onefile \
+          --assume-yes-for-downloads \
+          --follow-imports \
+          --plugin-enable=pygame \
+          --include-package=pygame \
+          --output-dir=dist \
+          --output-filename=${{ matrix.output_name }} \
+          tetris.py
+      shell: bash
+      # 使用bash确保命令在所有平台上一致执行
+
+    # 确保声音文件被正确打包
+    - name: Verify build output
+      run: |
+        ls -la dist/
+        if [ -f "dist/${{ matrix.output_name }}" ]; then
+          echo "Build successful: ${{ matrix.output_name }} created"
+        else
+          echo "Build failed: ${{ matrix.output_name }} not found"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: dist/${{ matrix.output_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 需要写入权限来创建 Release 和上传资源
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts # 下载所有构建产物到 artifacts 目录
+
+    - name: List downloaded artifacts # 调试步骤，查看下载的文件
+      run: ls -R artifacts
+
+    - name: Get current date
+      id: date
+      run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.date.outputs.date }}-${{ github.run_number }} # 使用日期和运行编号创建更友好的标签
+        name: Tetris Release ${{ steps.date.outputs.date }}
+        body: |
+          ## 俄罗斯方块游戏自动发布
+          
+          此版本由GitHub Actions自动构建，基于提交 ${{ github.sha }}
+          
+          ### 下载说明
+          - Windows用户: 下载 `tetris-windows.exe` 文件
+          - Linux用户: 下载 `tetris-linux` 文件，并使用 `chmod +x tetris-linux` 命令赋予执行权限
+          
+          ### 更新内容
+          - 自动构建的最新版本
+          - 包含所有最新功能和修复
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/tetris-linux/*
+          artifacts/tetris-windows.exe/*
+        # 使用通配符确保所有文件都被包含
+        file_glob: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
