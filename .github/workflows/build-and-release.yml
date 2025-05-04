@@ -115,8 +115,8 @@ jobs:
           此版本由GitHub Actions自动构建，基于提交 ${{ github.sha }}
           
           ### 下载说明
-          - Windows用户: 下载 `tetris-windows.exe` 文件
-          - Linux用户: 下载 `tetris-linux` 文件，并使用 `chmod +x tetris-linux` 命令赋予执行权限
+          - Windows用户: 下载 `tetris.exe` 文件
+          - Linux用户: 下载 `tetris.bin` 文件，并使用 `chmod +x tetris.bin` 命令赋予执行权限
           
           ### 更新内容
           - 自动构建的最新版本

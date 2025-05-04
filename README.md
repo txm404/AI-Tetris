@@ -22,8 +22,8 @@
 
 1. 访问项目的[Releases页面](https://github.com/txm404/AI-Tetris/releasess)
 2. 下载适合您操作系统的可执行文件：
-   - Windows: `tetris-windows.exe`
-   - Linux: `tetris-linux`（下载后需要使用`chmod +x tetris-linux`命令赋予执行权限）
+   - Windows: `tetris.exe`
+   - Linux: `tetris.bin`（下载后需要使用`chmod +x tetris.bin`命令赋予执行权限）
 3. 直接运行下载的文件即可开始游戏
 
 ### 从源代码运行
