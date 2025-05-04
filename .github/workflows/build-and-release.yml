@@ -58,8 +58,7 @@ jobs:
           --onefile \
           --assume-yes-for-downloads \
           --follow-imports \
-          --plugin-enable=pygame \
-          --include-package=pygame \
+          --include-module=pygame \
           --output-dir=dist \
           --output-filename=${{ matrix.output_name }} \
           tetris.py
